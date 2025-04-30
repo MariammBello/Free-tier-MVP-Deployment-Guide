@@ -6,7 +6,7 @@
 This write up serves the purpose of documenting a project contribution and as handover notes for other developers in the team. It aims at achieving a reproducible outcome for any cloud engineers who take on a similar project with the same requirements. A Free tier MVP deployment. ***You can find alternative non free tier choices that are even more efficient given a budget, as part of the link at the end of this write up.***
 
 ## Architecture Overview
-![Image](image.png)
+![Image](./Docs/image.png)
 
 Terraform apply via cicd: How to best prepare for provisioning resources collaboratively for your project. What do these mean for a Cloud Engineer.
 
@@ -150,7 +150,7 @@ So here´s your first milestone: JUST HIT TERRAFORM APPLY... ofcourse via collab
 
 
 The workflow will execute `terraform apply`, creating all the core infrastructure (VPC, EC2, ECR, etc.) for the first time and populating the state file in your S3 backend. **This CI/CD run replaces the need for a manual local `apply`.**
-![alt text](image-1.png)
+![alt text](./Docs/image-1.png)
 
 ***Manual Approval: Depending on the organisational set up in Github, the workflow run on the `main` branch can pause and require manual approval in the GitHub Actions tab. This is a different topic coverage outside the scope of this write up***
     
@@ -199,7 +199,7 @@ This phase sets up the GitHub Actions workflow for managing the Terraform infras
     *   Verify the `permissions:` block includes `id-token: write`.
     *   Update the `role-to-assume:` value in the `Configure AWS Credentials` steps with the ARN of the `GitHubActions-InfraWorkflowRole` role created in Step 11.
     *   **Note:** This workflow includes a step named "Create terraform.tfvars from secret" which uses a GitHub Secret named `TFVARS`. Ensure this secret exists in the repository settings (Settings -> Secrets and variables -> Actions) and contains the necessary variable definitions (like `ec2_key_name`, `aws_region`, etc.) in the `key = "value"` format required for a `.tfvars` file. Same as the .gitignored terraform.tfvars file. You can paste all of it. 
-    ![alt text](image-2.png)
+    ![alt text](./Docs/image-2.png)
 
 ## Phase 3.5: Application Deployment CI/CD Setup (`your-project-name-backend` Repository)
 
@@ -443,6 +443,6 @@ This guide provides a practical walkthrough for provisioning and managing a mini
 
 
 ### Bonus: 
-- [Alternative infrastructure choices](Infrastructure-Choice)
-- [Troubleshooting guide](troubleshooting_guide.md)
+- [Alternative infrastructure choices](./Docs/Infrastructure-Choice)
+- [Troubleshooting guide](./Docs/troubleshooting_guide.md)
 
