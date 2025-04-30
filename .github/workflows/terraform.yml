@@ -1,0 +1,132 @@
+# name: 'Terraform CI/CD'
+#
+# on:
+#   push:
+#     branches:
+#       - main
+#     paths:
+#       - 'environments/dev/**'
+#       - '.github/workflows/terraform.yml'
+#   pull_request:
+#     branches:
+#       - main
+#     paths:
+#       - 'environments/dev/**'
+#       - '.github/workflows/terraform.yml'
+#   workflow_dispatch: # Allows manual triggering from the Actions tab
+#
+# permissions:
+#   contents: read
+#   pull-requests: write # Required to post plan comments on PRs
+#   id-token: write # Required for AWS OIDC authentication
+#
+# jobs:
+#   terraform:
+#     name: 'Terraform'
+#     runs-on: ubuntu-latest
+#     # Environment for manual approval removed as it requires specific GitHub plans or public repos.
+#
+#     defaults:
+#       run:
+#         shell: bash
+#         working-directory: ./environments/dev # Set default working directory for steps
+#
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#
+#       - name: Configure AWS Credentials using OIDC
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           role-to-assume: arn:aws:iam::123456777888:role/GitHubActions-InfraWorkflowRole # Updated ARN
+#           aws-region: us-east-1
+#
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with:
+#           terraform_version: 1.8.3 # Specify your desired Terraform version
+#           terraform_wrapper: false # Disable wrapper for cleaner output
+#
+#       - name: Create terraform.tfvars from secret
+#         env:
+#           TFVARS_CONTENT: ${{ secrets.TFVARS }}
+#         run: echo "$TFVARS_CONTENT" > terraform.tfvars
+#         # This step assumes the working directory is already ./environments/dev
+#
+#       - name: Terraform Init
+#         id: init
+#         run: terraform init -input=false -no-color
+#
+#       - name: Terraform Validate
+#         id: validate
+#         run: terraform validate -no-color
+#
+#       - name: Terraform Format Check
+#         id: fmt
+#         run: terraform fmt -check -recursive -no-color
+#
+#       - name: Terraform Plan
+#         id: plan
+#         run: terraform plan -input=false -no-color -out=tfplan
+#         # Continue even if plan shows changes, fail only on errors
+#         continue-on-error: false
+#
+#       - name: Add Plan Output to PR Comment (Pull Request Only)
+#         if: github.event_name == 'pull_request'
+#         uses: dflook/terraform-plan@v1 # Use dflook action
+#         with:
+#           path: ./environments/dev # Correct input name
+#           plan_file: tfplan # Correct input name
+#           add_github_comment: true # Correct input name
+#
+#       - name: Save Plan Artifact (Main Branch Only)
+#         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: tfplan
+#           path: ./environments/dev/tfplan
+#
+#   apply:
+#     name: 'Terraform Apply'
+#     # Removed plan_exitcode check as wrapper is disabled
+#     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+#     needs: [terraform]
+#     runs-on: ubuntu-latest
+#     # Environment for manual approval removed as it requires specific GitHub plans or public repos.
+#     # Apply job will run automatically based on the 'if' condition.
+#
+#     defaults:
+#       run:
+#         shell: bash
+#         working-directory: ./environments/dev
+#
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#
+#       - name: Configure AWS Credentials using OIDC
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           role-to-assume: arn:aws:iam::123456777888:role/GitHubActions-InfraWorkflowRole # Updated ARN
+#           aws-region: us-east-1 # Replace with your AWS region
+#
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with:
+#           terraform_version: 1.8.3 # Must match the version used in the plan job
+#           terraform_wrapper: false
+#
+#       # Add this step
+#       - name: Terraform Init
+#         id: init # Optional id
+#         run: terraform init -input=false -no-color
+#
+#       - name: Download Plan Artifact
+#         uses: actions/download-artifact@v4
+#         with:
+#           name: tfplan
+#           path: ./environments/dev # Download to the correct working directory
+#
+#       - name: Terraform Apply
+#         id: apply
+#         run: terraform apply -input=false -auto-approve tfplan
